@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>AlphaBucks</title>
-<meta name="theme-color" content="#11131a">
+<meta name="theme-color" content="#151412">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,22 +13,36 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preload" href="fonts/anton.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/jetbrains-mono-800.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  @font-face {
+    font-family: "Anton";
+    src: url("fonts/anton.woff2") format("woff2");
+    font-weight: 400;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "JB Mono";
+    src: url("fonts/jetbrains-mono-800.woff2") format("woff2");
+    font-weight: 800;
+    font-display: block;
+  }
   :root {
-    --bg: #11131a;
-    --panel: #1b1e28;
-    --panel-2: #262a37;
-    --fg: #f4f5f8;
-    --muted: #8b90a3;
-    --ring-track: #262a37;
-    --accent: #4ade80;
-    --accent-ink: #062b14;
-    --warn: #fbbf24;
-    --warn-ink: #3a2700;
-    --danger: #f87171;
-    --ring-size: min(62vw, 34vh, 340px);
-    --pad-top: calc(env(safe-area-inset-top) + 12px);
-    --pad-bottom: calc(env(safe-area-inset-bottom) + 12px);
+    --paper: #f1ebdf;
+    --card: #fffaf0;
+    --ink: #151412;
+    --red: #ff3d1f;
+    --yellow: #ffd23f;
+    --muted: #8a8378;
+    --spent: rgba(21, 20, 18, 0.13);
+    --display: "Anton", "Avenir Next Condensed", "Arial Narrow", Impact, sans-serif;
+    --mono: "JB Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --body: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    --dial: min(66vw, 35vh, 360px);
+    --shadow: 5px 5px 0 var(--ink);
+    --pad-top: calc(env(safe-area-inset-top) + 14px);
+    --pad-bottom: calc(env(safe-area-inset-bottom) + 14px);
     --pad-left: calc(env(safe-area-inset-left) + 16px);
     --pad-right: calc(env(safe-area-inset-right) + 16px);
   }
@@ -36,20 +50,31 @@
   html, body {
     height: 100%;
     margin: 0;
-    background: var(--bg);
-    color: var(--fg);
+    background: var(--paper);
+    color: var(--ink);
     overflow: hidden;
     overscroll-behavior: none;
   }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, system-ui, sans-serif;
+    font-family: var(--body);
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     -webkit-text-size-adjust: 100%;
+    transition: background-color 0.25s;
   }
+  /* Black strip behind the iPhone status bar so its white text stays readable. */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: env(safe-area-inset-top);
+    background: var(--ink);
+    z-index: 30;
+  }
+  body.timeup { background: var(--red); }
   button {
     font: inherit;
     color: inherit;
@@ -60,7 +85,7 @@
   }
   input {
     font: inherit;
-    font-size: 16px; /* 16px+ stops iOS zooming in on focus */
+    font-size: 17px; /* 16px+ stops iOS zooming in on focus */
     -webkit-user-select: text;
     user-select: text;
   }
@@ -75,30 +100,45 @@
     padding: var(--pad-top) var(--pad-right) var(--pad-bottom) var(--pad-left);
     gap: 12px;
   }
-  #ringWrap {
+
+  #dialWrap {
     flex: none;
     align-self: center;
     position: relative;
-    width: var(--ring-size);
-    height: var(--ring-size);
-    margin-top: 8px;
+    width: var(--dial);
+    height: var(--dial);
+    margin-top: 6px;
   }
-  #ring { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
-  #ring .track { stroke: var(--ring-track); }
-  #ring .bar { stroke: var(--accent); stroke-linecap: round; transition: stroke 0.3s; }
-  #ring.low .bar { stroke: var(--danger); }
-  #ring.done .bar { stroke: var(--warn); }
-  #seconds {
+  #dial { width: 100%; height: 100%; display: block; overflow: visible; }
+  #dial line { stroke: var(--spent); stroke-width: 3.2; stroke-linecap: butt; }
+  #dial line.major { stroke-width: 4.2; }
+  #dial line.on { stroke: var(--ink); }
+  #dialWrap.low #dial line.on { stroke: var(--red); }
+  #readout {
     position: absolute;
     inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: calc(var(--ring-size) * 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em;
     line-height: 1;
   }
+  #time { white-space: nowrap; letter-spacing: -0.04em; }
+  #secs { font-size: calc(var(--dial) * 0.27); }
+  #cents { font-size: calc(var(--dial) * 0.15); }
+  #unit {
+    margin-top: calc(var(--dial) * 0.035);
+    font-size: calc(var(--dial) * 0.05);
+    letter-spacing: 0.25em;
+    color: var(--muted);
+  }
+  #dialWrap.low #time { color: var(--red); }
+  #dialWrap.low.tick #time { animation: thump 0.18s ease-out; }
+  @keyframes thump { 0% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  body.timeup #time, body.timeup #unit { color: var(--ink); }
 
   #topicArea {
     flex: 1 1 auto;
@@ -108,95 +148,129 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 8px;
-    border-radius: 24px;
+    padding: 4px;
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
   }
-  #topic {
-    font-size: clamp(32px, 10vw, 60px);
+  #label {
+    font-family: var(--mono);
     font-weight: 800;
-    line-height: 1.1;
+    font-size: 13px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    min-height: 1.2em;
+    margin-bottom: 8px;
+  }
+  body.timeup #label { color: var(--ink); }
+  #topic {
+    font-family: var(--display);
+    font-size: clamp(40px, 13vw, 76px);
+    line-height: 1.02;
+    text-transform: uppercase;
     overflow-wrap: anywhere;
     max-width: 100%;
   }
   #topic.idle { color: var(--muted); }
+  #topic.pop { animation: pop 0.16s ease-out; }
+  @keyframes pop { 0% { transform: translateY(6px); opacity: 0.2; } 100% { transform: none; opacity: 1; } }
   #sub {
-    margin-top: 10px;
-    font-size: clamp(18px, 5vw, 26px);
-    font-weight: 600;
-    color: var(--muted);
-    min-height: 1.3em;
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-weight: 800;
+    font-size: clamp(20px, 6vw, 30px);
+    min-height: 1.2em;
+    font-variant-numeric: tabular-nums;
   }
-  #sub.big { color: var(--fg); font-size: clamp(24px, 7vw, 36px); }
 
   #bar {
     flex: none;
     display: flex;
-    gap: 12px;
-    height: clamp(84px, 13vh, 120px);
+    gap: 14px;
+    height: clamp(80px, 12.5vh, 116px);
+    padding: 0 5px 5px 0; /* room for the hard shadow */
   }
-  #bar button {
+  .btn {
     flex: 1;
-    border-radius: 24px;
-    font-size: clamp(24px, 7vw, 34px);
-    font-weight: 800;
-    transition: transform 0.08s, filter 0.08s, opacity 0.2s;
+    border: 3px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    font-family: var(--display);
+    font-size: clamp(28px, 8.5vw, 40px);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    transition: transform 0.06s, box-shadow 0.06s, opacity 0.2s;
   }
-  #bar button:active { transform: scale(0.97); filter: brightness(0.9); }
-  #bar button:disabled { opacity: 0.45; }
-  #bar button[hidden] { display: none; }
-  .btn-go { background: var(--accent); color: var(--accent-ink); }
-  .btn-skip { background: var(--warn); color: var(--warn-ink); }
-  .btn-neutral { background: var(--panel-2); color: var(--fg); }
+  .btn:active { transform: translate(5px, 5px); box-shadow: 0 0 0 var(--ink); }
+  .btn:disabled { opacity: 0.4; }
+  .btn[hidden] { display: none; }
+  .btn-start { background: var(--red); color: var(--card); }
+  .btn-correct { background: var(--yellow); color: var(--ink); }
+  .btn-skip { background: var(--card); color: var(--ink); flex: 0.75; }
+  .btn-ink { background: var(--ink); color: var(--card); }
 
-  #letter {
+  #letterRow {
     flex: none;
-    text-align: center;
-    font-size: clamp(88px, 19vh, 200px);
-    font-weight: 900;
-    line-height: 1;
-    padding-bottom: 4px;
+    display: flex;
+    justify-content: center;
+    padding: 6px 0 8px;
   }
+  #letter {
+    --size: clamp(88px, 15.5vh, 170px);
+    width: var(--size);
+    height: var(--size);
+    display: grid;
+    place-items: center;
+    background: var(--card);
+    border: 4px solid var(--ink);
+    border-radius: 8px;
+    box-shadow: 8px 8px 0 var(--ink);
+    font-family: var(--display);
+    font-size: calc(var(--size) * 0.78);
+    line-height: 1;
+    padding-top: calc(var(--size) * 0.04);
+    transform: rotate(var(--tilt, -4deg));
+  }
+  #letter.deal { animation: deal 0.35s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes deal { 0% { transform: rotate(18deg) scale(0.6); opacity: 0; } 100% { transform: rotate(var(--tilt, -4deg)) scale(1); opacity: 1; } }
 
   /* Hold-to-open ring */
   #holdRing {
     position: fixed;
-    width: 120px;
-    height: 120px;
-    margin: -60px 0 0 -60px;
+    width: 124px;
+    height: 124px;
+    margin: -62px 0 0 -62px;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity 0.12s;
     z-index: 5;
   }
   #holdRing.on { opacity: 1; }
   #holdRing svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-  #holdRing .track { stroke: rgba(255,255,255,0.15); }
-  #holdRing .bar { stroke: var(--fg); stroke-linecap: round; }
+  #holdRing .track { stroke: var(--card); }
+  #holdRing .bar { stroke: var(--ink); }
 
   /* Time's-up flash */
   #flash {
     position: fixed;
     inset: 0;
-    background: var(--danger);
+    background: var(--ink);
     opacity: 0;
     pointer-events: none;
     z-index: 4;
   }
-  #flash.go { animation: flash 1.2s ease-out; }
+  #flash.go { animation: flash 0.9s steps(1, end); }
   @keyframes flash {
-    0%, 30%, 60% { opacity: 0.85; }
-    15%, 45%, 100% { opacity: 0; }
+    0% { opacity: 1; } 15% { opacity: 0; } 30% { opacity: 1; } 45% { opacity: 0; } 60% { opacity: 1; } 75%, 100% { opacity: 0; }
   }
 
   /* ---------- Settings ---------- */
   #settings {
     position: fixed;
     inset: 0;
-    background: var(--bg);
+    background: var(--paper);
     z-index: 10;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -212,93 +286,128 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--pad-top) 0 12px;
-    background: var(--bg);
+    padding: var(--pad-top) 0 14px;
+    background: var(--paper);
+    border-bottom: 3px solid var(--ink);
+    margin-bottom: 18px;
   }
-  .s-head h1 { margin: 0; font-size: 28px; }
+  .s-head h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 40px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
   .s-sec {
-    background: var(--panel);
-    border-radius: 18px;
-    padding: 16px;
-    margin-bottom: 14px;
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+    margin: 0 5px 20px 0;
   }
   .s-sec h2 {
     margin: 0 0 12px;
-    font-size: 15px;
+    font-family: var(--mono);
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
     display: flex;
     justify-content: space-between;
   }
+  .s-sec h2 span + span { color: var(--muted); }
   .s-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     font-size: 18px;
-    min-height: 44px;
-  }
-  .s-note { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
-  .pill {
-    background: var(--panel-2);
-    border-radius: 12px;
-    padding: 10px 16px;
-    font-size: 17px;
     font-weight: 600;
     min-height: 44px;
   }
-  .pill.primary { background: var(--accent); color: var(--accent-ink); }
-  .pill.danger { color: var(--danger); }
+  .s-note { color: var(--muted); font-size: 14px; margin: 10px 0 0; }
+  .chip {
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-family: var(--display);
+    font-size: 20px;
+    text-transform: uppercase;
+    min-height: 46px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .chip:active { transform: translate(3px, 3px); box-shadow: none; }
+  .chip.ink { background: var(--ink); color: var(--card); }
+  .chip.yellow { background: var(--yellow); }
+  .chip.danger { color: var(--red); }
 
-  #topicList { list-style: none; margin: 0; padding: 0; }
+  #topicList { list-style: none; margin: 0; padding: 0; counter-reset: t; }
   #topicList li {
     display: flex;
     gap: 6px;
     align-items: center;
     margin-bottom: 8px;
+    counter-increment: t;
+  }
+  #topicList li::before {
+    content: counter(t, decimal-leading-zero);
+    font-family: var(--mono);
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--muted);
+    width: 22px;
+    flex: none;
   }
   #topicList input, #newTopic {
     flex: 1;
     min-width: 0;
-    background: var(--panel-2);
-    color: var(--fg);
-    border: 1px solid transparent;
-    border-radius: 12px;
-    padding: 11px 12px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 10px;
     outline: none;
+    font-weight: 600;
   }
-  #topicList input:focus, #newTopic:focus { border-color: var(--accent); }
+  #topicList input:focus, #newTopic:focus { background: #fff; box-shadow: inset 0 0 0 2px var(--ink); }
   .icon-btn {
     flex: none;
-    width: 44px;
+    width: 42px;
     height: 44px;
-    border-radius: 12px;
-    background: var(--panel-2);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: var(--card);
+    font-family: var(--mono);
+    font-weight: 800;
     font-size: 18px;
     display: grid;
     place-items: center;
   }
-  .icon-btn:disabled { opacity: 0.3; }
-  .icon-btn.del { color: var(--danger); }
-  .add-row { display: flex; gap: 8px; margin-top: 4px; }
+  .icon-btn:active { background: var(--ink); color: var(--card); }
+  .icon-btn:disabled { opacity: 0.25; }
+  .icon-btn.del { color: var(--red); }
+  .add-row { display: flex; gap: 8px; margin-top: 6px; padding-left: 28px; }
 
   .seg {
     display: flex;
-    background: var(--panel-2);
-    border-radius: 12px;
-    padding: 4px;
+    border: 3px solid var(--ink);
+    border-radius: 6px;
+    overflow: hidden;
   }
   .seg button {
     flex: 1;
     padding: 10px;
-    border-radius: 9px;
-    background: transparent;
-    font-size: 17px;
-    font-weight: 600;
+    background: var(--card);
+    font-family: var(--display);
+    font-size: 20px;
+    text-transform: uppercase;
     color: var(--muted);
   }
-  .seg button.on { background: var(--fg); color: var(--bg); }
+  .seg button + button { border-left: 3px solid var(--ink); }
+  .seg button.on { background: var(--ink); color: var(--card); }
 
   .grid {
     display: grid;
@@ -308,37 +417,51 @@
   }
   .grid button {
     aspect-ratio: 1;
-    border-radius: 10px;
-    background: var(--panel-2);
-    font-size: 19px;
-    font-weight: 700;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    background: var(--card);
+    font-family: var(--display);
+    font-size: 22px;
+    padding-top: 2px;
   }
-  .grid button.sel { background: var(--accent); color: var(--accent-ink); }
-  .grid button.off { background: transparent; color: var(--muted); text-decoration: line-through; outline: 1px dashed var(--panel-2); }
+  .grid button.sel { background: var(--ink); color: var(--card); }
+  .grid button.off {
+    color: var(--muted);
+    border-style: dashed;
+    border-color: var(--muted);
+    background: repeating-linear-gradient(135deg, transparent 0 6px, var(--spent) 6px 8px);
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+  }
 
-  .stepper { display: flex; align-items: center; gap: 10px; }
-  .stepper output { min-width: 64px; text-align: center; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper output {
+    min-width: 70px;
+    text-align: center;
+    font-family: var(--mono);
+    font-weight: 800;
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+  }
 
-  .switch { position: relative; width: 52px; height: 32px; flex: none; }
+  .switch { position: relative; width: 58px; height: 34px; flex: none; }
   .switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; inset: 0; z-index: 1; }
   .switch span {
-    position: absolute; inset: 0; border-radius: 16px; background: var(--panel-2); transition: background 0.2s;
+    position: absolute; inset: 0; border: 3px solid var(--ink); border-radius: 4px; background: var(--paper);
   }
   .switch span::after {
-    content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
-    background: #fff; transition: transform 0.2s;
+    content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 2px;
+    background: var(--ink); transition: transform 0.15s;
   }
-  .switch input:checked + span { background: var(--accent); }
-  .switch input:checked + span::after { transform: translateX(20px); }
+  .switch input:checked + span { background: var(--yellow); }
+  .switch input:checked + span::after { transform: translateX(24px); }
 
   /* ---------- Paused dialog ---------- */
   #dialog {
     position: fixed;
     inset: 0;
     z-index: 20;
-    background: rgba(0,0,0,0.75);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    background: rgba(21, 20, 18, 0.55);
     display: grid;
     place-items: center;
     padding: 24px;
@@ -346,46 +469,63 @@
   #dialog[hidden] { display: none; }
   .d-box {
     width: min(100%, 380px);
-    background: var(--panel);
-    border-radius: 24px;
-    padding: 24px;
-    text-align: center;
+    background: var(--paper);
+    border: 4px solid var(--ink);
+    border-radius: 8px;
+    box-shadow: 10px 10px 0 var(--ink);
+    padding: 22px 22px 26px;
   }
-  .d-box h2 { margin: 0 0 6px; font-size: 26px; }
-  .d-box p { margin: 0 0 20px; color: var(--muted); font-size: 17px; }
-  .d-box button { display: block; width: 100%; height: 64px; border-radius: 18px; font-size: 22px; font-weight: 800; margin-top: 10px; }
+  .d-box h2 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 44px;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .d-box p {
+    margin: 8px 0 18px;
+    font-family: var(--mono);
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .d-box .btn { display: block; width: calc(100% - 5px); height: 70px; margin-top: 14px; }
 </style>
 </head>
 <body>
 
 <main id="app">
-  <div id="ringWrap">
-    <svg id="ring" viewBox="0 0 100 100" aria-hidden="true">
-      <circle class="track" cx="50" cy="50" r="45" fill="none" stroke-width="8"/>
-      <circle class="bar" id="ringBar" cx="50" cy="50" r="45" fill="none" stroke-width="8"/>
-    </svg>
-    <div id="seconds" aria-live="off">30</div>
+  <div id="dialWrap">
+    <svg id="dial" viewBox="0 0 200 200" aria-hidden="true"></svg>
+    <div id="readout">
+      <div id="time"><span id="secs">30</span><span id="cents">.00</span></div>
+      <div id="unit">SEC</div>
+    </div>
   </div>
 
   <div id="topicArea">
+    <div id="label"></div>
     <div id="topic" class="idle">Ready?</div>
     <div id="sub"></div>
   </div>
 
   <div id="bar">
-    <button id="startBtn" class="btn-go">Start</button>
-    <button id="skipBtn" class="btn-skip" hidden>Skip</button>
-    <button id="correctBtn" class="btn-go" hidden>Correct</button>
-    <button id="newBtn" class="btn-neutral" hidden>New round</button>
+    <button id="startBtn" class="btn btn-start">Start</button>
+    <button id="skipBtn" class="btn btn-skip" hidden>Skip</button>
+    <button id="correctBtn" class="btn btn-correct" hidden>Correct</button>
+    <button id="newBtn" class="btn btn-ink" hidden>New round</button>
   </div>
 
-  <div id="letter">A</div>
+  <div id="letterRow"><div id="letter">A</div></div>
 </main>
 
 <div id="holdRing" aria-hidden="true">
   <svg viewBox="0 0 100 100">
-    <circle class="track" cx="50" cy="50" r="44" fill="none" stroke-width="7"/>
-    <circle class="bar" id="holdBar" cx="50" cy="50" r="44" fill="none" stroke-width="7"/>
+    <circle class="track" cx="50" cy="50" r="42" fill="none" stroke-width="12"/>
+    <circle class="bar" id="holdBar" cx="50" cy="50" r="42" fill="none" stroke-width="12"/>
   </svg>
 </div>
 <div id="flash"></div>
@@ -393,7 +533,7 @@
 <section id="settings" hidden>
   <div class="s-head">
     <h1>Settings</h1>
-    <button id="closeSettings" class="pill primary">Close</button>
+    <button id="closeSettings" class="chip ink">Close</button>
   </div>
 
   <div class="s-sec">
@@ -401,11 +541,11 @@
     <ol id="topicList"></ol>
     <div class="add-row">
       <input id="newTopic" type="text" placeholder="Add a topic" enterkeyhint="done" autocomplete="off" autocapitalize="sentences">
-      <button id="addTopic" class="pill primary">Add</button>
+      <button id="addTopic" class="chip yellow">Add</button>
     </div>
-    <div class="s-row" style="margin-top:12px">
+    <div class="s-row" style="margin-top:14px">
       <span></span>
-      <button id="resetTopics" class="pill danger">Reset topics</button>
+      <button id="resetTopics" class="chip danger">Reset topics</button>
     </div>
   </div>
 
@@ -417,7 +557,7 @@
   </div>
 
   <div class="s-sec">
-    <h2>Letter</h2>
+    <h2><span>Letter</span></h2>
     <div class="seg" id="letterMode">
       <button data-mode="random">Random</button>
       <button data-mode="manual">Pick one</button>
@@ -453,10 +593,10 @@
 
 <div id="dialog" hidden>
   <div class="d-box">
-    <h2>Round paused</h2>
+    <h2>Paused</h2>
     <p id="dialogInfo"></p>
-    <button id="resumeBtn" class="btn-go">Resume</button>
-    <button id="restartBtn" class="btn-neutral">New round</button>
+    <button id="resumeBtn" class="btn btn-correct">Resume</button>
+    <button id="restartBtn" class="btn btn-skip">New round</button>
   </div>
 </div>
 
@@ -482,6 +622,9 @@
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const HOLD_MS = 3000;
   const END_LOCK_MS = 900; // stops a frantic tap jumping straight into the next round
+  const TICKS = 60;
+
+  const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
   function loadSettings() {
     let saved = {};
@@ -498,34 +641,47 @@
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
   }
-  const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
   let S = loadSettings();
 
   // ---------- Round state (not saved) ----------
   const G = {
     state: 'ready',    // ready | running | paused | won | timeup
-    letter: 'A',
+    letter: '',
     queue: [],
+    count: 0,          // topics dealt this round
     endTime: 0,        // Date.now() at which the round ends (while running)
     remaining: 0,      // ms left (while ready/paused/ended)
-    total: 0,          // ms the round started with
-    endedAt: 0
+    total: 0           // ms the round started with
   };
 
   // ---------- DOM ----------
   const $ = id => document.getElementById(id);
   const el = {
-    ring: $('ring'), ringBar: $('ringBar'), seconds: $('seconds'),
-    topicArea: $('topicArea'), topic: $('topic'), sub: $('sub'),
+    dialWrap: $('dialWrap'), dial: $('dial'), secs: $('secs'), cents: $('cents'),
+    topicArea: $('topicArea'), label: $('label'), topic: $('topic'), sub: $('sub'),
     start: $('startBtn'), skip: $('skipBtn'), correct: $('correctBtn'), newRound: $('newBtn'),
     letter: $('letter'), holdRing: $('holdRing'), holdBar: $('holdBar'), flash: $('flash'),
     settings: $('settings'), dialog: $('dialog'), dialogInfo: $('dialogInfo')
   };
-  const RING_C = 2 * Math.PI * 45;
-  const HOLD_C = 2 * Math.PI * 44;
-  el.ringBar.style.strokeDasharray = RING_C;
+  const HOLD_C = 2 * Math.PI * 42;
   el.holdBar.style.strokeDasharray = HOLD_C;
+
+  // Stopwatch dial: 60 tick marks that go out one by one as time drains.
+  const ticks = [];
+  for (let i = 0; i < TICKS; i++) {
+    const a = (i / TICKS) * Math.PI * 2 - Math.PI / 2;
+    const major = i % 5 === 0;
+    const r1 = major ? 78 : 84, r2 = 97;
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', (100 + r1 * Math.cos(a)).toFixed(2));
+    ln.setAttribute('y1', (100 + r1 * Math.sin(a)).toFixed(2));
+    ln.setAttribute('x2', (100 + r2 * Math.cos(a)).toFixed(2));
+    ln.setAttribute('y2', (100 + r2 * Math.sin(a)).toFixed(2));
+    if (major) ln.classList.add('major');
+    el.dial.appendChild(ln);
+    ticks.push(ln);
+  }
 
   // ---------- Helpers ----------
   function shuffle(arr) {
@@ -559,11 +715,30 @@
   function msLeft() {
     return G.state === 'running' ? Math.max(0, G.endTime - Date.now()) : G.remaining;
   }
+  // 8423 ms -> ["8", ".42"]; rounds down so it never shows time you don't have.
+  function splitTime(ms) {
+    const cs = Math.floor(Math.max(0, ms) / 10);
+    return [String(Math.floor(cs / 100)), '.' + String(cs % 100).padStart(2, '0')];
+  }
+  const pad2 = n => String(n).padStart(2, '0');
 
   // ---------- Game flow ----------
+  function setLetter(l) {
+    const changed = l !== el.letter.textContent;
+    G.letter = l;
+    el.letter.textContent = l;
+    if (changed) {
+      el.letter.style.setProperty('--tilt', (Math.random() * 10 - 5).toFixed(1) + 'deg');
+      el.letter.classList.remove('deal');
+      void el.letter.offsetWidth;
+      el.letter.classList.add('deal');
+    }
+  }
+
   function deal() {
-    G.letter = pickLetter();
+    setLetter(pickLetter());
     G.queue = buildQueue();
+    G.count = G.queue.length;
     G.total = G.remaining = S.timerSeconds * 1000;
     G.state = 'ready';
     render();
@@ -572,11 +747,12 @@
   function start() {
     if (G.state !== 'ready' || !G.queue.length) return;
     unlockAudio();
+    G.count = G.queue.length;
     G.total = G.remaining = S.timerSeconds * 1000;
     G.endTime = Date.now() + G.remaining;
     G.state = 'running';
     keepAwake(true);
-    render();
+    render(true);
     loop();
   }
 
@@ -589,14 +765,14 @@
       G.state = 'won';
       endRound();
     }
-    render();
+    render(true);
   }
 
   function skip() {
     if (G.state !== 'running') return;
     if (tickCheck()) return;
     if (G.queue.length > 1) G.queue.push(G.queue.shift());
-    render();
+    render(true);
   }
 
   function timeUp() {
@@ -611,7 +787,6 @@
   }
 
   function endRound() {
-    G.endedAt = Date.now();
     keepAwake(false);
     el.newRound.disabled = true;
     setTimeout(() => { el.newRound.disabled = false; }, END_LOCK_MS);
@@ -653,44 +828,65 @@
   }
 
   // ---------- Rendering ----------
+  let litTicks = -1, lastSec = '';
   function drawTimer() {
     const left = msLeft();
-    const frac = G.total ? left / G.total : 1;
-    el.ringBar.style.strokeDashoffset = RING_C * (1 - clamp(frac, 0, 1));
-    const secs = Math.ceil(left / 1000);
-    if (el.seconds.textContent !== String(secs)) el.seconds.textContent = secs;
-    el.ring.classList.toggle('low', G.state === 'running' && left <= 5000 || G.state === 'timeup');
-    el.ring.classList.toggle('done', G.state === 'won');
-  }
+    const [s, c] = splitTime(left);
+    if (el.secs.textContent !== s) el.secs.textContent = s;
+    if (el.cents.textContent !== c) el.cents.textContent = c;
 
-  function render() {
-    const s = G.state;
-    drawTimer();
-    el.letter.textContent = G.letter;
-
-    const topics = G.queue.length;
-    el.topic.classList.toggle('idle', s === 'ready');
-    el.sub.classList.remove('big');
-    if (s === 'ready') {
-      el.topic.textContent = topics ? 'Ready?' : 'No topics';
-      el.sub.textContent = topics ? '' : 'Hold here to add some';
-    } else if (s === 'running' || s === 'paused') {
-      el.topic.textContent = G.queue[0];
-      el.sub.textContent = topics === 1 ? 'Last one!' : topics + ' left';
-    } else if (s === 'won') {
-      el.topic.textContent = 'All done!';
-      el.sub.textContent = Math.ceil(G.remaining / 1000) + 's left';
-      el.sub.classList.add('big');
-    } else if (s === 'timeup') {
-      el.topic.textContent = "Time's up";
-      el.sub.textContent = topics + ' left';
-      el.sub.classList.add('big');
+    const lit = G.total ? Math.ceil(clamp(left / G.total, 0, 1) * TICKS) : TICKS;
+    if (lit !== litTicks) {
+      for (let i = 0; i < TICKS; i++) ticks[i].classList.toggle('on', i < lit);
+      litTicks = lit;
     }
 
-    el.start.hidden = s !== 'ready';
-    el.start.disabled = !topics;
-    el.skip.hidden = el.correct.hidden = !(s === 'running' || s === 'paused');
-    el.newRound.hidden = !(s === 'won' || s === 'timeup');
+    const low = G.state === 'running' && left <= 5000;
+    el.dialWrap.classList.toggle('low', low);
+    // A little thump on each second of the last five.
+    if (low && s !== lastSec) {
+      el.dialWrap.classList.remove('tick');
+      void el.dialWrap.offsetWidth;
+      el.dialWrap.classList.add('tick');
+    }
+    lastSec = s;
+  }
+
+  function render(newTopic) {
+    const st = G.state;
+    drawTimer();
+    document.body.classList.toggle('timeup', st === 'timeup');
+
+    const left = G.queue.length;
+    const prevTopic = el.topic.textContent;
+    el.topic.classList.toggle('idle', st === 'ready');
+    if (st === 'ready') {
+      el.label.textContent = left ? left + ' topics · letter ' + G.letter : '';
+      el.topic.textContent = left ? 'Ready?' : 'No topics';
+      el.sub.textContent = left ? '' : 'Hold here to add some';
+    } else if (st === 'running' || st === 'paused') {
+      el.label.textContent = 'Topic ' + pad2(G.count - left + 1) + ' / ' + pad2(G.count);
+      el.topic.textContent = G.queue[0];
+      el.sub.textContent = '';
+    } else if (st === 'won') {
+      el.label.textContent = 'All ' + G.count + ' cleared';
+      el.topic.textContent = 'Done!';
+      el.sub.textContent = splitTime(G.remaining).join('') + 's left';
+    } else if (st === 'timeup') {
+      el.label.textContent = (G.count - left) + ' / ' + G.count + ' done';
+      el.topic.textContent = "Time's up";
+      el.sub.textContent = left + ' left';
+    }
+    if (newTopic && el.topic.textContent !== prevTopic) {
+      el.topic.classList.remove('pop');
+      void el.topic.offsetWidth;
+      el.topic.classList.add('pop');
+    }
+
+    el.start.hidden = st !== 'ready';
+    el.start.disabled = !left;
+    el.skip.hidden = el.correct.hidden = !(st === 'running' || st === 'paused');
+    el.newRound.hidden = !(st === 'won' || st === 'timeup');
   }
 
   el.start.addEventListener('click', start);
@@ -833,13 +1029,15 @@
     el.settings.hidden = true;
     if (G.state === 'paused') {
       const n = G.queue.length;
-      el.dialogInfo.textContent = Math.ceil(G.remaining / 1000) + 's and ' + n + (n === 1 ? ' topic' : ' topics') + ' left';
+      el.dialogInfo.textContent = splitTime(G.remaining).join('') + 's · ' + n + (n === 1 ? ' topic' : ' topics') + ' left';
       el.dialog.hidden = false;
     } else if (G.state === 'ready') {
       // Pick up any changes to topics, letters or timer length.
-      if (!letterIsValid(G.letter)) G.letter = pickLetter();
+      if (!letterIsValid(G.letter)) setLetter(pickLetter());
       G.queue = buildQueue();
+      G.count = G.queue.length;
       G.total = G.remaining = S.timerSeconds * 1000;
+      litTicks = -1;
       render();
     } else {
       render();

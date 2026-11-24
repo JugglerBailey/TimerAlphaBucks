@@ -1,6 +1,6 @@
 // Offline support: serve the app from cache, refresh the cache in the background.
 // Bump VERSION when you change files so phones drop the old copy.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'alphabucks-' + VERSION;
 const ASSETS = [
   './',
@@ -8,7 +8,9 @@ const ASSETS = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './fonts/anton.woff2',
+  './fonts/jetbrains-mono-800.woff2'
 ];
 
 self.addEventListener('install', event => {
